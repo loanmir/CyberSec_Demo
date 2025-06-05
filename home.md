@@ -1,66 +1,125 @@
-# My Open Publishing Space
-
-## Create, Share and Collaborate
-
-![Photo of Mountain](images/mountain.jpg)
-
-[Docsify](https://docsify.js.org/#/) can generate article, portfolio and documentation websites on the fly. Unlike Docusaurus, Hugo and many other Static Site Generators (SSG), it does not generate static html files. Instead, it smartly loads and parses your Markdown content files and displays them as a website.
+# CyberSecurity Report: Pen testing and vulnerability exploitation on Metasploitable3
 
 ## Introduction
 
-**Markdown** is a system-independent markup language that is easier to learn and use than **HTML**.
+In this project I examine a practical penetration testing exercise during which a series of controlled attacks steps were carried out within a test environment. These steps represent a variation of some lab activities proposed in the *Hacking Lab* section of the course website. Two virtual machines are used, more specifically **Metasploitable3** is used as the target machine and **Kali Linux** as the attacking machine. 
 
-![Figure 1: The Markdown Mark](images/markdown-red.png)
+This setup allows the simulation of a realistic environment in which an attacker could attempt to compromise a target system.
 
-Some of the key benefits are:
+##### **Threat model:**
+  * Virtual machines are connected to the same network
+  * Victim can log on to Metasploitable2 machine using **Valid Credentials**
+  *
 
-1. Markdown is simple to learn, with minimal extra characters, so it's also quicker to write content.
-2. Less chance of errors when writing in markdown.
-3. Produces valid XHTML output.
-4. Keeps the content and the visual display separate, so you cannot mess up the look of your site.
-5. Write in any text editor or Markdown application you like.
-6. Markdown is a joy to use!
+## Reconnaissance
 
-John Gruber[^1], the author of Markdown, puts it like this:
+As a first step, we need to determine our own(attacker) IP address and netmask in order to define the scope of the scan and discover available IP addresses that could potentially be targeted. This can be done by opening a terminal in the Kali Linux machine and executing the `ifconfig` command (*Fig. 1*). 
 
-> The overriding design goal for Markdown’s formatting syntax is to make it as readable as possible. The idea is that a Markdown-formatted document should be publishable as-is, as plain text, without looking like it’s been marked up with tags or formatting instructions. While Markdown’s syntax has been influenced by several existing text-to-HTML filters, the single biggest source of inspiration for Markdown’s syntax is the format of plain text email.
-> -- <cite>John Gruber</cite>
+##### **Result:** 
+We found out that the attacker machine has an IP address of 10.0.2.15 and a subnet mask of 255.255.255.0. This result indicates that the first 24 bits are used to identify the **network portion**, while the remaining 8 bits are allocated for the **individual hosts** within the network. This network can be represented as 10.0.2.0/24, meaning that the address range can cover all IP addresses from 10.0.2.1 to 10.0.2.254.
+
+![*Fig. 1*](images/IFCONFIG_screen.png)
+
+<br>
+
+In order to determine which hosts are connected to this network we can execute `nmap 10.0.2.0/24`.
+
+##### **Result:** 
+As a result, multiple IP addresses were detected. This might have occured because the environment and both the machines were tested while the system was connected to a mobile hotspot via a smartphone. The active host at `10.0.2.4`, which has multiple open ports, is identified as our target machine(*Fig. 2*).
+
+
+![*Fig. 2*](images/NMAP_screen.png)
+
+<br>
+
+
+We can also perform a full scan on the target to gather as much information as possible,getting details about the running services, their versions and other additional information. This is done by using `nmap -sV -p- 10.0.2.4`, where:
+
+  * **-sV:** Tells *Nmap* to perform service/version detection
+  * **-p-:** It allows scanning all 65.535 ports, instead of just most commonly used ports.
+
+
+## Initial access
+
+Now that we have identified the IP address of the target machine, we can attempt to gain access by impersonating a legitimate user. One common method is to connect to the system via its SSH service using valid user credentials. However, this approach is not viable in our case, as there is no SSH service running on port 22 (*Fig. 2*), which prevents us from establishing any SSH connection with the target machine.
+
+An alternative method for gaining initial access is to perform a brute-force attack against the SMB service(running on port 445) using a dictionary of usernames and passwords to obtain valid credentials. **SMB** is a network protocol used for sharing resources between computers. It operates on a client-server model and includes mechanisms for both user authentication and authorization.
+
+##### **Dictionary creation:**
+  First thing first, we need to construct a dictionary that can be obtained from the target's configuration page content. We do this by using the following command: `cewl -d 0 -w dictionary.txt https://github.com/rapid7/metasploitable3/wiki/Configuration`, which crawls a given web page and extracts useful words to build a dictionary file.
+  
+For the purposes of this project, to reduce the time required for exploitation, we can limit the dictionary to a maximum of 15 words. Additionally, we ensure that the following key terms are included in the list: *vagrant*, *administrator*, *Administrator*, and *sploit*.
+  
+##### **Exploit execution:**
+
+  * **Launching Metasploit:** Starting Metasploit on the terminal using:`msfconsole -q`
+  
+  * **Using the SMB scanner:** Within Metasploit, we load the scanner `use auxiliary/scanner/smb/smb_login` 
+  
+  * **Target setup:** Defining IP address of target machine: `set RHOSTS 10.0.2.4`
+  
+  * **USERNAME/PASSWORD dictionaries setup:** `set USER_FILE /home/kali/dictionary.txt` & `set PASS_FILE /home/kali/dictionary.txt`
+  
+  * **Stopping on success:** Attack is stopped as soon as a valid credentials are found: `set STOP_ON_SUCCESS true`
+  
+To run the exploit, use `run`.
+
+![*Fig. 3*](images/smb_scan_credentials.png)
+
+<br>
+
+
+##### **Result:** 
+We successfully obtained valid SMB login credentials with the username "vagrant" and password "vagrant". In our case, these credentials also provide access to the underlying Windows system. 
+
+This is demonstrated by running another exploit using the Metasploit module `auxiliary/scanner/smb/smb_enumusers`. This module leverages valid SMB credentials(*Fig. 3*) to enumerate local user accounts stored in the target machine’s Security Account Manager (SAM) database.
+
+
+## *PsExec Exploitation*
+
+Using the credentials we obtained, we can exploit a known technique to execute remote commands on the target system. Specifically, we use PsExec, a legitimate Windows utility that allows administrators to run commands remotely on other machines. To leverage PsExec, valid credentials for a local administrator account on the target system are required. Once successfully exploited, PsExec can be used by a **penetration tester** to execute arbitrary code and potentially escalate access to other users on the system. The service runs on port 445.
+
+##### **Exploit execution:**
+The exploitation is done by using the "PsExec module", which is `exploit/windows/smb/psexec`. 
+
+  * **Loading the module:** Within Metasploit we load the module `use exloit/winbdows/smb/psexec`.
+  
+  * **Target setup:**  Defining IP address of target machine: `set RHOSTS 10.0.2.4`.
+  
+  * **Port setup**: Configuring the port on which the service runs:  `set RPORT 445`.
+  
+  * **Credentials setup:** Configuring the username and password for the remote connection:`set SMBUser vagrant` & `set SMBPass vagrant`.
+  
+To run the exploit, use `run`.
+
+
+##### **Results:**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PUT INTO BIBLIOGRAPHY:!!!!
+https://www.hackingarticles.in/password-crackingsmb/
+
+
+
+
 
 
 Without further delay, let us go over the main elements of Markdown and what the resulting HTML looks like:
 
-### Headings
 
-Headings from `h1` through `h6` are constructed with a `#` for each level:
-
-```markdown
-# h1 Heading
-## h2 Heading
-### h3 Heading
-#### h4 Heading
-##### h5 Heading
-###### h6 Heading
-```
-
-Renders to:
-
-<h1> h1 Heading </h1>
-<h2>  h2 Heading </h2>
-<h3>  h3 Heading </h3>
-<h4>  h4 Heading </h4>
-<h5>  h5 Heading </h5>
-<h6>  h6 Heading </h6>
-
-HTML:
-
-```html
-<h1>h1 Heading</h1>
-<h2>h2 Heading</h2>
-<h3>h3 Heading</h3>
-<h4>h4 Heading</h4>
-<h5>h5 Heading</h5>
-<h6>h6 Heading</h6>
-```
 
 ### Comments
 
