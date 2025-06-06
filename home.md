@@ -77,7 +77,7 @@ This is demonstrated by running another exploit using the Metasploit module `aux
 
 ## *PsExec Exploitation*
 
-Using the credentials we obtained, we can exploit a known technique to execute remote commands on the target system. Specifically, we use PsExec, a legitimate Windows utility that allows administrators to run commands remotely on other machines. To leverage PsExec, valid credentials for a local administrator account on the target system are required. Once successfully exploited, PsExec can be used by a **penetration tester** to execute arbitrary code and potentially escalate access to other users on the system. The service runs on port 445.
+Using the credentials we obtained, we can exploit a known technique to execute remote commands on the target system. Specifically, we use **PsExec**, a legitimate Windows utility that allows administrators to run commands remotely on other machines. To leverage PsExec, valid credentials for a local administrator account on the target system are required. Once successfully exploited, PsExec can be used by a **penetration tester** to execute arbitrary code and potentially escalate access to other users on the system. The service runs on port 445, which was confirmed to be open during the earlier reconnaissance phase.
 
 ##### **Exploit execution:**
 The exploitation is done by using the "PsExec module", which is `exploit/windows/smb/psexec`. 
@@ -92,14 +92,48 @@ The exploitation is done by using the "PsExec module", which is `exploit/windows
   
 To run the exploit, use `run`.
 
+![*Fig. 4*](images/ps_exec_output.png)
+
 
 ##### **Results:**
+  We successfully gained remote access to the target system. The exploit was carried out using valid SMB credentials(*vagrant:vagrant*). The PsExec module initiated a reverse TCP connection to the Kali machine on port 4444, and a Meterpreter session was successfully established. After gaining access we checked our level of privilege by executing the `getuid` command, confirming that we had obtained **NT Authority/SYSTEM-level** privileges, the highest level of access on a Windows machine. 
+  
+This level of access provides complete control over the system, allowing us to execute arbitrary commands, manage files, create and modify user accounts, and carry out post-exploitation activities:
+
+####  **1. Creating user and assigning administrative privileges**
+We are able to create a new user account without raising any immediate alerts. Firstly, I had to establish a standard Windows shell by using the `shell` command. Once inside the Windows shell, I executed the command `net user lucas pwd-lucas /add`  to create a new user account named lucas with the password pwd-lucas. To elevate this account's privileges, I then ran `net localgroup administrators lucas /add`, effectively adding the user to the Administrators group and granting it full administrative rights on the system.
+
+The second command can also be used to [elevate an existing user](#password-hash-dumping) by adding them to the Administrators group.
+
+After creating a new Administrator account or promoting an existing user to Administrator, the original built-in Administrator account **can be disabled**. This can be done using the command: `net user administrator /active no`.
+
+<br>
+  
+####  **2. Password Hash Dumping**
+We can extract password hash dumps from the memory and attempt to decrypt them to retrieve account passwords. This can be done by running the `hashdump` command in a Meterpreter session:
+
+![*Fig. 5*](images/hashdump_output.png)
+<br>
+  
+#### **3. Data exfiltration** 
+One of the most valuable post-exploitation activities that we can perform is **accessing and exfiltrating sensitive files** from the system. 
+
+
+<br>
+
+
+#### **4. Enhanced Reconnaissance with SYSTEM-Level Access**  
+After gaining NT Authority/SYSTEM privileges, we can perform more thorough reconnaissance and identify which exploits are most likely to succeed. We can have deeper visibility into the system's configuration and security settings. This can be performed when executing `run post/multi/recon/local_exploit_suggester`:
 
 
 
 
+![*Fig. 6*](images/enhanced_reconnaissance_output.png)
+
+<br>
 
 
+## *Dos attack*
 
 
 
