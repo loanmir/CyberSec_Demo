@@ -20,7 +20,7 @@ We found out that the attacker machine has an IP address of 10.0.2.15 and a subn
 In order to determine which hosts are connected to this network we can execute `nmap 10.0.2.0/24`.
 
 ##### **Result:** 
-As a result, multiple IP addresses were detected. This might have occured because the environment and both the machines were tested while the system was connected to a mobile hotspot via a smartphone. The active host at `10.0.2.4`, which has multiple open ports, is identified as our target machine(*Fig. 2*).
+As a result, multiple IP addresses were detected. This might have occured because the environment and both the machines were tested while the system was connected to a mobile hotspot via a smartphone. The active host at `10.0.2.4`, which has multiple open ports, is identified as our target machine (*Fig. 2*).
 
 
 ![*Fig. 2*](images/NMAP_screen.png)
@@ -116,7 +116,7 @@ We can extract password hash dumps from the memory and attempt to decrypt them t
 #### **3. Data exfiltration** 
 One of the most valuable post-exploitation activities that we can perform is **accessing and exfiltrating sensitive files** from the system. We can easily identify directories that are likely to contain sensitive information, such as folders that contain work-related documents, saved passwords in text files and internal process documents. 
 
-In this project, I have used the `download` command to recursively copy selected directories from the vagrant user's profile on the target machine to the Kali system.
+In my case, I have used the `download` command to recursively copy selected directories from the vagrant user's profile on the target machine to the Kali system.
 
 
 <br>
@@ -161,15 +161,23 @@ The second vulnerability affects the HTTP.sys driver, which is used by Windows w
   * The RHOSTS are once again configured to `10.0.2.4`
   
 
+
+<img src="images/dos_attack_screenshot.png" alt="*Fig. 8*" width="500" height="400" />
+
+<br>
+  
+
 ##### **RESULT:**
-In both cases the exploits affected the system by making it crash.
+In both cases, the exploits caused the system to crash, resulting in a blue screen error followed by an automatic restart of the Windows operating system. 
 
 
 
-## CONCLUSION
+## Conclusion
+Using Kali Linux, I conducted a penetration test on the Metasploitable3 virtual machine, which exposed multiple high-risk vulnerabilities. By performing brute-force attacks, I successfully obtained valid SMB credentials, which enabled remote access through a Meterpreter session. The project demonstrates that there must be a basic security hygiene in a system, such as network monitoring, usage of strong and unique passwords, and restricting the access to sensitive services. Integrating regular security inspections and patch management into the organization's defensive strategy can significantly reduce the attack surface.
 
 
-### BIBLIOGRAPHY
+
+### Bibliography
 
 Bartoli Alberto - Cybersecurity Course, Hacking Lab <br>
 https://bartolialberto.github.io/CybersecurityCourse/Hacking/Metasploitable3%20demo/#discovery
