@@ -77,7 +77,7 @@ Using the credentials we obtained, we can exploit a known technique to execute r
 ##### **Exploit execution:**
 The exploitation is done by using the "PsExec module", which is `exploit/windows/smb/psexec`. 
 
-  * **Loading the module:** Within Metasploit we load the module `use exloit/winbdows/smb/psexec`.
+  * **Loading the module:** Within Metasploit we load the module `use exloit/windows/smb/psexec`.
   
   * **Target setup:**  Defining IP address of target machine: `set RHOSTS 10.0.2.4`.
   
@@ -102,7 +102,6 @@ The second command can also be used to [elevate an existing user](#password-hash
 
 After creating a new Administrator account or promoting an existing user to Administrator, the original built-in Administrator account **can be disabled**. This can be done using the command: `net user administrator /active no`.
 
-[//]:![*Fig. 5*](images/user_lucas_inserted.png)
 
 <br>
   
